@@ -16,7 +16,7 @@ using namespace Hyprutils::String;
 
 constexpr const size_t MAX_RESULTS_IN_LAUNCHER = 50;
 
-CUI::CUI(bool open) : m_openByDefault(open) {
+CUI::CUI(bool open, bool dmenuMode, const std::string& dmenuPlaceholder) : m_openByDefault(open), m_dmenuMode(dmenuMode), m_dmenuPlaceholder(dmenuPlaceholder) {
     static auto PGRABFOCUS  = Hyprlang::CSimpleConfigValue<Hyprlang::INT>(g_configManager->m_config.get(), "general:grab_focus");
     static auto PWINDOWSIZE = Hyprlang::CSimpleConfigValue<Hyprlang::VEC2>(g_configManager->m_config.get(), "ui:window_size");
 
@@ -34,8 +34,11 @@ CUI::CUI(bool open) : m_openByDefault(open) {
         Hyprtoolkit::CColumnLayoutBuilder::begin()->size({Hyprtoolkit::CDynamicSize::HT_SIZE_PERCENT, Hyprtoolkit::CDynamicSize::HT_SIZE_PERCENT, {1, 1}})->gap(4)->commence();
     m_layout->setMargin(4);
 
+    // Use custom placeholder for dmenu mode if provided, otherwise use default
+    std::string placeholder = m_dmenuPlaceholder.empty() ? I18n::localize(I18n::TXT_KEY_SEARCH_SOMETHING, {}) : m_dmenuPlaceholder;
+
     m_inputBox = Hyprtoolkit::CTextboxBuilder::begin()
-                     ->placeholder(I18n::localize(I18n::TXT_KEY_SEARCH_SOMETHING, {}))
+                     ->placeholder(placeholder)
                      ->onTextEdited([this](SP<Hyprtoolkit::CTextboxElement>, const std::string& query) { scheduleQueryUpdate(query); })
                      ->size({Hyprtoolkit::CDynamicSize::HT_SIZE_PERCENT, Hyprtoolkit::CDynamicSize::HT_SIZE_ABSOLUTE, {1.F, 28.F}})
                      ->multiline(false)
@@ -156,8 +159,18 @@ void CUI::onSelected() {
         return;
     }
 
-    if (m_currentResults.size() <= m_activeElementId)
+    if (m_currentResults.size() <= m_activeElementId) {
+        // In dmenu mode, if no matching results, return the search query
+        if (m_dmenuMode && !m_resultsAreMatches) {
+            const std::string query = m_inputBox->currentText();
+            if (!query.empty()) {
+                g_serverIPCSocket->sendSelectionMade(query);
+                setWindowOpen(false);
+            }
+        }
         return;
+    }
+
     g_serverIPCSocket->sendSelectionMade(m_currentResults.at(m_activeElementId).result->name());
     m_currentResults.at(m_activeElementId).result->run();
     setWindowOpen(false);
@@ -182,6 +195,7 @@ bool CUI::updateResults(std::vector<SFinderResult>&& results) {
     m_queryPending               = false;
     m_activateOnQuery            = false;
     m_currentResults             = std::move(results);
+    m_resultsAreMatches          = true;  // By default, results are real matches
 
     m_activeElementId = 0;
 

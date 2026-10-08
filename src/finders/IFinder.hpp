@@ -1,30 +1,34 @@
 #pragma once
 
-#include "../helpers/Memory.hpp"
-#include "IFinderResult.hpp"
-
 #include <string>
 #include <vector>
 #include <optional>
+
+#include "../helpers/Memory.hpp"
+
+class IFinderResult;
+
+enum class eFinderTypes {
+    FINDER_DESKTOP = 0,
+    FINDER_UNICODE,
+    FINDER_MATH,
+    FINDER_IPC,
+    FINDER_FONT,
+};
 
 struct SFinderResult {
     std::string                label;
     std::string                icon;
     SP<IFinderResult>          result;
-    std::optional<std::string> overrideFont;
-    bool                       hasIcon = false;
+    std::optional<std::string> overrideFont = std::nullopt;
+    bool                       hasIcon       = false;
+    bool                       hasMatches    = true;  // Track if results are real fuzzy matches
 };
-
-constexpr const size_t MAX_RESULTS_PER_FINDER = 50;
 
 class IFinder {
   public:
     virtual ~IFinder() = default;
 
     virtual std::vector<SFinderResult> getResultsForQuery(const std::string& query) = 0;
-
-    virtual void                       init();
-
-  protected:
-    IFinder() = default;
+    virtual void                       init()                                          = 0;
 };

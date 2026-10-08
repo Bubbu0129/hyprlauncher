@@ -81,10 +81,15 @@ std::vector<SFinderResult> CIPCFinder::getResultsForQuery(const std::string& que
     std::vector<SFinderResult>     results;
 
     std::vector<SP<IFinderResult>> fuzzed;
-    if (!query.empty())
-        fuzzed = Fuzzy::getNResults(m_entriesGeneric, query, MAX_RESULTS_PER_FINDER);
-    else
+    bool                           hasMatches = false;
+
+    if (!query.empty()) {
+        fuzzed     = Fuzzy::getNResults(m_entriesGeneric, query, MAX_RESULTS_PER_FINDER);
+        hasMatches = !fuzzed.empty();
+    } else {
         fuzzed = std::vector<SP<IFinderResult>>{m_entriesGeneric.begin(), m_entriesGeneric.begin() + std::min(m_entriesGeneric.size(), MAX_RESULTS_PER_FINDER)};
+        hasMatches = true;
+    }
 
     results.reserve(fuzzed.size());
 
@@ -96,6 +101,7 @@ std::vector<SFinderResult> CIPCFinder::getResultsForQuery(const std::string& que
             .label  = p->m_entry,
             .icon   = "",
             .result = p,
+            .hasMatches = hasMatches,
         });
     }
 

@@ -20,7 +20,7 @@ class CResultButton;
 
 class CUI {
   public:
-    CUI(bool open);
+    CUI(bool open, bool dmenuMode = false, const std::string& dmenuPlaceholder = "");
     ~CUI();
 
     void run();
@@ -51,11 +51,14 @@ class CUI {
     std::vector<SFinderResult>            m_currentResults;
     std::vector<SP<CResultButton>>        m_resultButtons;
 
-    bool                                  m_open            = false;
-    bool                                  m_openByDefault   = true;
-    bool                                  m_queryPending    = false;
-    bool                                  m_activateOnQuery = false;
-    size_t                                m_activeElementId = 0;
+    bool                                  m_open              = false;
+    bool                                  m_openByDefault     = true;
+    bool                                  m_queryPending      = false;
+    bool                                  m_activateOnQuery   = false;
+    bool                                  m_dmenuMode         = false;
+    bool                                  m_resultsAreMatches = true;  // Track if results are real matches or fallback
+    size_t                                m_activeElementId   = 0;
+    std::string                           m_dmenuPlaceholder  = "";
 
     friend class CQueryProcessor;
     friend class CResultButton;

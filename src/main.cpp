@@ -27,6 +27,7 @@ static void printHelp() {
               << " -d | --daemon              | Do not open after initializing\n"
               << " -o | --options \"a,b,c\"   | Pass an explicit option array\n"
               << " -m | --dmenu               | Pass an option list in dmenu-style (stdin, newline-separated)\n"
+              << " -p | --placeholder TEXT   | Custom placeholder text (only in dmenu mode)\n"
               << " -f | --finder \"math\"     | Use the specified finder\n"
               << " -t | --toggle              | When running with this option, toggle instead of opening\n"
               << " -h | --help                | Print this menu\n"
@@ -68,6 +69,7 @@ int main(int argc, char** argv, char** envp) {
     bool                     openByDefault = true, dmenuMode = false, toggle = false;
     std::vector<std::string> explicitOptions;
     std::string              selectedFinder = "";
+    std::string              dmenuPlaceholder = "";
 
     for (int i = 1; i < argc; ++i) {
         std::string_view sv{argv[i]};
@@ -99,6 +101,13 @@ int main(int argc, char** argv, char** envp) {
             for (const auto& e : vars) {
                 explicitOptions.emplace_back(e);
             }
+            ++i;
+        } else if (sv == "-p" || sv == "--placeholder") {
+            if (i + 1 >= argc) {
+                Debug::log(ERR, "Missing argument for --placeholder", sv);
+                return 1;
+            }
+            dmenuPlaceholder = argv[i + 1];
             ++i;
         } else if (sv == "-f" || sv == "--finder") {
             if (i + 1 >= argc) {
@@ -141,7 +150,7 @@ int main(int argc, char** argv, char** envp) {
         if (!explicitOptions.empty())
             socket->sendOpenWithOptions(explicitOptions);
         else {
-            socket->sendSelectFinder(selectedFinder);
+            socket->selectFinder(selectedFinder);
             toggle ? socket->sendToggle() : socket->sendOpen();
         }
         return 0;
@@ -177,7 +186,7 @@ int main(int argc, char** argv, char** envp) {
     g_configManager = makeUnique<CConfigManager>();
     g_configManager->parse();
 
-    g_ui = makeUnique<CUI>(openByDefault);
+    g_ui = makeUnique<CUI>(openByDefault, dmenuMode, dmenuPlaceholder);
     g_ui->run();
     return 0;
 }
